@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagramas - Sistema de venta de stands</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 1200px; padding: 0 1rem; }
+  h1, h2 { font-weight: 600; }
+  .diagrama { overflow-x: auto; margin-bottom: 2.5rem; }
+</style>
+</head>
+<body>
+<h1>Sistema de venta de stands</h1>
+
+<h2>Diagrama de clases</h2>
+<div class="diagrama"><pre class="mermaid">
+classDiagram
+    direction LR
+    class Stand {
+        -String id
+        -double metrosCuadrados
+        -EstadoStand estado
+        -String empresaBloqueo
+    }
+    class Editorial {
+        -int id
+        -String nombre
+        -String correo
+    }
+    class Reservacion {
+        -int id
+        -String idStand
+        -int idEditorial
+        -LocalDate fechaReserva
+        -double montoPagado
+        -double montoAcreditado
+    }
+    class EstadoStand {
+        &lt;&lt;enumeration&gt;&gt;
+        DISPONIBLE
+        RESERVADO
+        OCUPADO
+        BLOQUEADO
+    }
+    class ConexionBD {
+        +obtener() Connection
+    }
+    class InicializadorBD {
+        +crearYPoblar()
+    }
+    class StandDAO {
+        +listarTodos() List~Stand~
+    }
+    class EditorialDAO {
+        +listarTodas() List~Editorial~
+    }
+    class ReservacionDAO {
+        +listarTodas() List~Reservacion~
+    }
+    class ControladorStands {
+        +listarStands() List~Stand~
+        +precioDe(Stand) double
+    }
+    class ControladorEditoriales {
+        +listarEditoriales() List~Editorial~
+    }
+    class ControladorReservaciones {
+        +listarReservaciones(LocalDate) List~ResumenReservacion~
+        +estaCubiertaCompleta(ResumenReservacion) boolean
+    }
+    class ControladorNotificaciones {
+        +revisar(LocalDate) List~Notificacion~
+    }
+    class ResumenReservacion {
+        &lt;&lt;record&gt;&gt;
+        id
+        stand
+        editorial
+        fechaReserva
+        vigenciaHasta
+        montoPagado
+        porcentajeCubierto
+        condicion
+    }
+    class CondicionReservacion {
+        &lt;&lt;enumeration&gt;&gt;
+        VIGENTE
+        POR_VENCER
+        VENCIDA
+        EN_PAGOS
+        PAGADA
+        INACTIVA
+    }
+    class Configuracion {
+        -double costoPorM2
+        -int diasVigenciaReserva
+        -double porcentajeMinimoOcupado
+        -double descuentoProntoPago
+        -LocalDate fechaProntoPago
+        -LocalDate fechaMaximaCubrirCosto
+        -int diasAnticipoAviso
+    }
+    class Notificador {
+        &lt;&lt;interface&gt;&gt;
+        +enviar(Notificacion)
+    }
+    class NotificadorConsola
+    class Notificacion {
+        &lt;&lt;record&gt;&gt;
+        destinatario
+        tipo
+        standId
+        fechaVence
+        diasRestantes
+    }
+    class TipoNotificacion {
+        &lt;&lt;enumeration&gt;&gt;
+        RESERVA_POR_VENCER
+        PRONTO_PAGO_POR_VENCER
+        FECHA_LIMITE_POR_VENCER
+    }
+    class VistaConsola {
+        +ejecutar()
+    }
+    class Main
+
+    Stand --&gt; EstadoStand
+    Reservacion ..&gt; Stand : idStand
+    Reservacion ..&gt; Editorial : idEditorial
+
+    StandDAO ..&gt; ConexionBD
+    EditorialDAO ..&gt; ConexionBD
+    ReservacionDAO ..&gt; ConexionBD
+    InicializadorBD ..&gt; ConexionBD
+    StandDAO ..&gt; Stand
+    EditorialDAO ..&gt; Editorial
+    ReservacionDAO ..&gt; Reservacion
+
+    ControladorStands --&gt; StandDAO
+    ControladorStands --&gt; Configuracion
+    ControladorEditoriales --&gt; EditorialDAO
+    ControladorReservaciones --&gt; ReservacionDAO
+    ControladorReservaciones --&gt; StandDAO
+    ControladorReservaciones --&gt; EditorialDAO
+    ControladorReservaciones --&gt; ControladorStands
+    ControladorReservaciones --&gt; Configuracion
+    ControladorReservaciones ..&gt; ResumenReservacion
+    ResumenReservacion --&gt; CondicionReservacion
+    ControladorNotificaciones --&gt; ControladorReservaciones
+    ControladorNotificaciones --&gt; Configuracion
+    ControladorNotificaciones --&gt; Notificador
+    ControladorNotificaciones ..&gt; Notificacion
+    Notificacion --&gt; TipoNotificacion
+    NotificadorConsola ..|&gt; Notificador
+
+    VistaConsola --&gt; ControladorStands
+    VistaConsola --&gt; ControladorEditoriales
+    VistaConsola --&gt; ControladorReservaciones
+    VistaConsola --&gt; ControladorNotificaciones
+    Main --&gt; InicializadorBD
+    Main --&gt; VistaConsola
+</pre></div>
+
+<h2>Modelo de base de datos</h2>
+<div class="diagrama"><pre class="mermaid">
+erDiagram
+    EDITORIAL ||--o{ RESERVACION : realiza
+    STAND ||--o{ RESERVACION : "es reservado en"
+    EDITORIAL {
+        int id PK
+        varchar nombre
+        varchar correo
+    }
+    STAND {
+        varchar id PK
+        float metros_cuadrados
+        varchar estado
+        varchar empresa_bloqueo
+    }
+    RESERVACION {
+        int id PK
+        varchar id_stand FK
+        int id_editorial FK
+        date fecha_reserva
+        float monto_pagado
+        float monto_acreditado
+    }
+</pre></div>
+
+<h2>Estados de un stand</h2>
+<div class="diagrama"><pre class="mermaid">
+stateDiagram-v2
+    [*] --&gt; DISPONIBLE
+    DISPONIBLE --&gt; RESERVADO: reservar
+    DISPONIBLE --&gt; BLOQUEADO: bloquear (admin)
+    BLOQUEADO --&gt; DISPONIBLE: liberar (admin)
+    BLOQUEADO --&gt; RESERVADO: transferir a editorial
+    RESERVADO --&gt; OCUPADO: pago &gt;= % mínimo
+    RESERVADO --&gt; DISPONIBLE: reserva vencida
+</pre></div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true });</script>
+</body>
+</html>
