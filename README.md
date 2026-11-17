@@ -4,7 +4,7 @@ Aplicación de línea de comandos en Java 17 para administrar la venta de stands
 
 ## Video explicativo
 
-URL del video (máximo 5 minutos, con acceso verificado): _pendiente de agregar_
+URL del video: https://drive.google.com/file/d/10I_urbvtq-UKVZWV_GN113LP1EhuLQzn/view?usp=sharing
 
 ## Ejecutar
 
